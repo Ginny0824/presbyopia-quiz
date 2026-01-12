@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>老花眼生理機制與專業驗配測驗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f0f4f8;
+        }
+
+        .option-transition {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .quiz-card {
+            display: none;
+        }
+
+        .quiz-card.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .progress-bar {
+            transition: width 0.4s ease;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- 頂部標題與進度 -->
+        <div class="bg-slate-800 p-6 text-white text-center">
+            <h1 class="text-2xl font-bold mb-2">老花眼專業知識測驗</h1>
+            <p class="text-slate-400 text-sm">提升對調節力下降與光學矯正的專業理解</p>
+            
+            <div class="mt-6 h-2 w-full bg-slate-700 rounded-full overflow-hidden">
+                <div id="progress" class="progress-bar h-full bg-blue-500 w-0"></div>
+            </div>
+        </div>
+
+        <!-- 測驗內容區 -->
+        <div id="quiz-container" class="p-6 md:p-10">
+            <!-- 題目會由 JS 動態生成 -->
+        </div>
+
+        <!-- 按鈕控制區 -->
+        <div class="p-6 bg-slate-50 border-t flex justify-between items-center">
+            <button id="prev-btn" onclick="changeQuestion(-1)" class="px-6 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed">
+                上一題
+            </button>
+            <span id="question-number" class="text-slate-500 font-medium">1 / 10</span>
+            <button id="next-btn" onclick="changeQuestion(1)" class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                下一題
+            </button>
+            <button id="submit-btn" onclick="showResults()" class="hidden px-6 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">
+                提交結果
+            </button>
+        </div>
+    </div>
+
+    <!-- 結果彈窗 -->
+    <div id="result-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 text-center shadow-2xl">
+            <div id="result-icon" class="text-6xl mb-4">🎓</div>
+            <h2 class="text-3xl font-bold text-slate-800 mb-2">測驗完成！</h2>
+            <div id="final-score" class="text-5xl font-extrabold text-blue-600 my-6">0 / 100</div>
+            <p id="result-message" class="text-slate-600 mb-8">您對老花眼的知識掌握非常紮實。</p>
+            <button onclick="location.reload()" class="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors">
+                重新挑戰
+            </button>
+            <button onclick="closeModal()" class="w-full mt-3 py-3 text-slate-500 font-medium hover:text-slate-800">
+                查看解析
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+            {
+                q: "關於「老花眼（Presbyopia）」的生理機制與臨床診斷，下列敘述何者最符合專家的觀點？",
+                options: [
+                    "老花眼完全取決於年齡，未滿 40 歲的病患主訴近距離模糊時，應優先懷疑假性近視。",
+                    "眼球運動（Eye Exercises）可增強睫狀肌肌力，是目前有效逆轉老花的物理治療。",
+                    "臨床上若發現 20-30 歲族群試戴低度數正度數鏡片後感到舒適，即顯示調節力有下降現象。",
+                    "高度近視患者因眼軸較長，其發生老花眼的年齡必定比正視眼晚 10 年以上。"
+                ],
+                correct: 2,
+                exp: "現代用眼習慣改變，20-30歲族群因過度使用數位裝置，常出現調節力提早下降。試戴低度正度數鏡片若能減輕視覺壓力，是重要的診斷參考。"
+            },
+            {
+                q: "針對「現成老花眼鏡」的光學缺陷及其對視覺系統的影響，下列分析何者正確？",
+                options: [
+                    "主要問題僅在於外觀不美觀，光學品質與處方眼鏡無異。",
+                    "現成眼鏡通常具備固定的瞳距（PD），若配戴者不符會產生稜鏡效應導致不適。",
+                    "現成眼鏡可以自動修正 100 度以內的散光。",
+                    "眼科醫師建議，若只是單純老花，直接購買現成眼鏡即可。"
+                ],
+                correct: 1,
+                exp: "現成老花鏡的瞳距固定，且雙眼度數一致，對於有散光或雙眼視差的人會產生不必要的稜鏡效應，長期配戴易導致頭痛與疲勞。"
+            },
+            {
+                q: "某患者「老花雷射」術後白日視力良好，但主訴「夜間閱讀」仍感吃力。下列處置何者最恰當？",
+                options: [
+                    "告知患者這是手術失敗，需轉診二次手術。",
+                    "建議患者夜間閱讀時使用放大鏡即可。",
+                    "考量夜間對比度需求較高，可驗配一副低度數的夜間閱讀專用眼鏡。",
+                    "建議患者點散瞳劑放鬆睫狀肌。"
+                ],
+                correct: 2,
+                exp: "瞳孔在夜間會放大，導致景深變淺及對比度下降。即使接受過手術，針對特定的夜間精細工作配戴輔助眼鏡是專業且科學的做法。"
+            },
+            {
+                q: "關於「室內型多焦鏡片（Office/Indoor Lenses）」的敘述，下列何者正確？",
+                options: [
+                    "該鏡片設計為單焦點，無法看清手機文字。",
+                    "該鏡片上方看無限遠清晰，適合開車使用。",
+                    "主要針對中近距離（約 2 至 4 公尺）優化，適合辦公但「不適合」駕駛。",
+                    "價格通常比一般單焦點鏡片便宜。"
+                ],
+                correct: 2,
+                exp: "室內型鏡片犧牲了遠視力（開車）換取更寬廣的中近距離視野，最適合辦公環境使用。"
+            },
+            {
+                q: "50 歲高度近視患者平時配戴硬式隱形眼鏡（RGP），其老花輔助方案何者最符合建議？",
+                options: [
+                    "要求患者完全停戴 RGP。",
+                    "在 RGP 之外，上班時外加一副「辦公室鏡片（Office lens）」進行輔助。",
+                    "建議患者進行單眼視（Monovision）雷射手術。",
+                    "請患者閱讀時摘除 RGP，直接看近。"
+                ],
+                correct: 1,
+                exp: "RGP 提供優異的遠視力。在 RGP 之上疊加一副針對中近距離設計的框架眼鏡（Office Lens），能讓患者在不改變用眼習慣下獲得最佳辦公體驗。"
+            },
+            {
+                q: "在進行漸進多焦點鏡片驗配衛教時，下列哪項觀念是錯誤的？",
+                options: [
+                    "鏡片價格差異主要來自視野寬廣度、像差控制等技術。",
+                    "驗配時必須測量單眼瞳距、眼位高、頂點距離等參數。",
+                    "初次配戴者若出現頭暈，必定是度數處方錯誤，應立即重驗。",
+                    "應引導患者學習頭部與眼球的協調運作。"
+                ],
+                correct: 2,
+                exp: "漸進多焦存在像差區（搖晃感），初次佩戴需要 1-2 週的適應期，學習「頭動眼不動」的技巧，頭暈通常是適應問題而非處方錯誤。"
+            },
+            {
+                q: "精準的老花驗配流程應包含：",
+                options: [
+                    "僅需使用電腦驗光機並對照年齡給予度數。",
+                    "進行 21 項驗光程序，包含雙眼協調與閱讀距離評估。",
+                    "只要確認最佳矯正視力達到 1.0 即可。",
+                    "直接讓患者試戴最高度數的老花眼鏡。"
+                ],
+                correct: 1,
+                exp: "精準驗光必須考量調節幅度（Amplitude of Accommodation）、調節靈敏度以及患者實際的工作距離（如：繪畫 vs 寫程式）。"
+            },
+            {
+                q: "「眼科醫師」與「驗光師」在老花照護中的「雙師合作」模式為何？",
+                options: [
+                    "驗光師診斷疾病，醫師負責配鏡。",
+                    "醫師排除病理性問題（如白內障）；驗光師負責精準驗光與功能鏡片諮詢。",
+                    "民眾應先配鏡，配不好再去診所。",
+                    "工作完全重疊，擇一即可。"
+                ],
+                correct: 1,
+                exp: "老花可能與白內障、青光眼初期混淆。由醫師確認眼球健康後，交由專業驗光師針對視覺生活需求進行光學設計。"
+            },
+            {
+                q: "老花眼鏡的光學原理是利用何種透鏡？",
+                options: [
+                    "凹透鏡（Concave Lens）。",
+                    "凸透鏡（Convex Lens），幫助光線聚焦於視網膜上。",
+                    "柱狀鏡（Cylindrical Lens）。",
+                    "稜鏡（Prism）。"
+                ],
+                correct: 1,
+                exp: "老花是由於調節力不足導致焦點落在視網膜後方，因此需使用「凸透鏡」產生匯聚作用，將焦點前移至視網膜。"
+            },
+            {
+                q: "關於「3D 智能定位」與「模擬體驗」的目的：",
+                options: [
+                    "純粹為了行銷噱頭。",
+                    "讓患者先感受不同距離變化，並精準定位瞳孔與光學中心。",
+                    "用來檢查視網膜剝離。",
+                    "為了讓患者練習眼球運動。"
+                ],
+                correct: 1,
+                exp: "透過模擬體驗可降低患者對多焦鏡片的恐懼感，而精準的 3D 定位則確保配鏡參數（傾斜角、眼位高）完美契合患者臉型，減少像差感。"
+            }
+        ];
+
+        let currentIdx = 0;
+        const userAnswers = new Array(quizData.length).fill(null);
+        let submitted = false;
+
+        function initQuiz() {
+            const container = document.getElementById('quiz-container');
+            quizData.forEach((data, qIdx) => {
+                const card = document.createElement('div');
+                card.id = `q-${qIdx}`;
+                card.className = `quiz-card ${qIdx === 0 ? 'active' : ''}`;
+                
+                let optionsHtml = data.options.map((opt, oIdx) => `
+                    <button onclick="selectOption(${qIdx}, ${oIdx})" 
+                            id="opt-${qIdx}-${oIdx}"
+                            class="option-btn option-transition w-full text-left p-4 mb-3 border-2 border-slate-200 rounded-xl hover:bg-slate-50 flex items-center group">
+                        <span class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 mr-4 font-bold group-hover:bg-blue-100 group-hover:text-blue-600">
+                            ${String.fromCharCode(65 + oIdx)}
+                        </span>
+                        <span class="flex-1">${opt}</span>
+                    </button>
+                `).join('');
+
+                card.innerHTML = `
+                    <h3 class="text-xl font-bold text-slate-800 mb-6 leading-snug">Q${qIdx + 1}. ${data.q}</h3>
+                    <div class="options-group">${optionsHtml}</div>
+                    <div id="exp-box-${qIdx}" class="hidden mt-6 p-5 bg-blue-50 border-l-4 border-blue-500 rounded-r-xl">
+                        <p class="text-blue-800 font-bold mb-1">【專業解析】正確答案：(${String.fromCharCode(65 + data.correct)})</p>
+                        <p class="text-slate-700 leading-relaxed">${data.exp}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            updateUI();
+        }
+
+        function selectOption(qIdx, oIdx) {
+            if (submitted) return;
+            
+            userAnswers[qIdx] = oIdx;
+            
+            // UI 更新
+            const btns = document.querySelectorAll(`#q-${qIdx} .option-btn`);
+            btns.forEach((btn, i) => {
+                if (i === oIdx) {
+                    btn.classList.add('border-blue-500', 'bg-blue-50');
+                    btn.querySelector('span:first-child').classList.add('bg-blue-500', 'text-white');
+                } else {
+                    btn.classList.remove('border-blue-500', 'bg-blue-50');
+                    btn.querySelector('span:first-child').classList.remove('bg-blue-500', 'text-white');
+                }
+            });
+
+            // 自動跳下一題 (延遲以利視覺確認)
+            setTimeout(() => {
+                if (currentIdx < quizData.length - 1 && userAnswers[currentIdx] !== null) {
+                    changeQuestion(1);
+                }
+            }, 300);
+        }
+
+        function changeQuestion(dir) {
+            const nextIdx = currentIdx + dir;
+            if (nextIdx >= 0 && nextIdx < quizData.length) {
+                document.getElementById(`q-${currentIdx}`).classList.remove('active');
+                currentIdx = nextIdx;
+                document.getElementById(`q-${currentIdx}`).classList.add('active');
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('question-number').innerText = `${currentIdx + 1} / ${quizData.length}`;
+            document.getElementById('progress').style.width = `${((currentIdx + 1) / quizData.length) * 100}%`;
+            
+            document.getElementById('prev-btn').disabled = currentIdx === 0;
+            
+            if (currentIdx === quizData.length - 1) {
+                document.getElementById('next-btn').classList.add('hidden');
+                document.getElementById('submit-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('next-btn').classList.remove('hidden');
+                document.getElementById('submit-btn').classList.add('hidden');
+            }
+        }
+
+        function showResults() {
+            if (userAnswers.includes(null)) {
+                const emptyIdx = userAnswers.indexOf(null);
+                document.getElementById(`q-${currentIdx}`).classList.remove('active');
+                currentIdx = emptyIdx;
+                document.getElementById(`q-${currentIdx}`).classList.add('active');
+                updateUI();
+                alert("請完成所有題目後再提交。");
+                return;
+            }
+
+            submitted = true;
+            let score = 0;
+            
+            quizData.forEach((data, qIdx) => {
+                const btns = document.querySelectorAll(`#q-${qIdx} .option-btn`);
+                const expBox = document.getElementById(`exp-box-${qIdx}`);
+                expBox.classList.remove('hidden');
+
+                if (userAnswers[qIdx] === data.correct) {
+                    score += 10;
+                    btns[data.correct].classList.add('border-green-500', 'bg-green-50');
+                } else {
+                    btns[userAnswers[qIdx]].classList.add('border-red-500', 'bg-red-50');
+                    btns[data.correct].classList.add('border-green-500', 'bg-green-50');
+                }
+            });
+
+            document.getElementById('final-score').innerText = `${score} / 100`;
+            document.getElementById('result-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('result-modal').classList.add('hidden');
+            document.getElementById('submit-btn').innerText = "重新計算";
+            // 滾動回頂部看解析
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.onload = initQuiz;
+    </script>
+</body>
+</html>
